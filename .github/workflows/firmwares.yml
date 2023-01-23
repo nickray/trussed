@@ -17,7 +17,7 @@ jobs:
           path: trussed
 
       - name: Checkout solokeys/solo2
-        run: git clone https://github.com/solokeys/solo2 solo2
+        run: git clone https://github.com/robin-nitrokey/solo2 solo2 -b new-client
       
       - name: Checkout Nitrokey/nitrokey-3-firmware
         run: git clone https://github.com/Nitrokey/nitrokey-3-firmware nk3
