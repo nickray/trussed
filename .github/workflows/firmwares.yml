@@ -17,8 +17,8 @@ jobs:
           path: trussed
 
       - name: Checkout solokeys/solo2
-        run: git clone https://github.com/robin-nitrokey/solo2 solo2 -b new-client
-      
+        run: git clone https://github.com/solokeys/solo2 solo2
+
       - name: Checkout Nitrokey/nitrokey-3-firmware
         run: git clone https://github.com/Nitrokey/nitrokey-3-firmware nk3
 
@@ -53,20 +53,20 @@ jobs:
         with:
           crate: flip-link
           version: latest
-          use-tool-cache: true      
+          use-tool-cache: true
 
       - name: Patch solo2 trussed-dependency
-        run: | 
+        run: |
           echo "[patch.crates-io]" >> solo2/runners/lpc55/Cargo.toml
-          echo "trussed = { path = '../../../trussed' }" >> solo2/runners/lpc55/Cargo.toml 
+          echo "trussed = { path = '../../../trussed' }" >> solo2/runners/lpc55/Cargo.toml
 
-      # - name: Patch Nk3 trussed-dependency -> currently not, as we already patch trussed 
-      #  run: | 
+      # - name: Patch Nk3 trussed-dependency -> currently not, as we already patch trussed
+      #  run: |
       #    echo "[patch.crates-io]" >> nk3/runners/lpc55/Cargo.toml
-      #    echo "trussed = { git = 'https://github.com/trussed-dev/trussed' }" >> nk3/runners/lpc55/Cargo.toml 
+      #    echo "trussed = { git = 'https://github.com/trussed-dev/trussed' }" >> nk3/runners/lpc55/Cargo.toml
 
       - name: Build Solo2 Firmware
         run: make build-release -C solo2/runners/lpc55
-      
+
       - name: Build Nitrokey-3 Firmware
         run: make -C nk3/runners/embedded

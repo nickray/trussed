@@ -6,11 +6,18 @@ use crate::{
     types::ClientContext,
 };
 
-pub enum BackendId<C> {
+/// Default BackendId::Custom parameter,
+/// corresponding to no custom backends.
+pub enum Empty {}
+
+pub enum BackendId<I = Empty> {
     Software,
-    Custom(C),
+    Custom(I),
 }
 
+/// The core property of a backend: reply to requests.
+///
+/// Cf. `async fn(Request) -> Result<Response, Error>` in `tower`.
 pub trait Backend<P: Platform> {
     fn reply_to(
         &mut self,
@@ -20,16 +27,24 @@ pub trait Backend<P: Platform> {
     ) -> Result<Reply, Error>;
 }
 
-pub trait Backends<P: Platform> {
+/// Selection of backend by ID, to be implemented
+/// in client code on a collection of injected backends
+/// if the default `SoftwareOnly` collection is not used.
+pub trait Select<P: Platform> {
     type Id: 'static;
 
-    fn select(&mut self, id: &Self::Id) -> Option<&mut dyn Backend<P>>;
+    fn select(&mut self, id: &Self::Id) -> &mut dyn Backend<P>;
 }
 
-impl<P: Platform> Backends<P> for () {
-    type Id = ();
+/// The default collection of backends: just the default software backend.
+pub struct SoftwareOnly;
 
-    fn select(&mut self, _id: &Self::Id) -> Option<&mut dyn Backend<P>> {
-        None
+/// Blanket implementation of `Select` for the collection
+/// of no custom backends.
+impl<P: Platform> Select<P> for SoftwareOnly {
+    type Id = Empty;
+
+    fn select(&mut self, id: &Self::Id) -> &mut dyn Backend<P> {
+        match *id {}
     }
 }

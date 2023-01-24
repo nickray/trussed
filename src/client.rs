@@ -80,7 +80,7 @@ use core::marker::PhantomData;
 use interchange::{Interchange as _, Requester};
 
 use crate::api::*;
-use crate::backend::{BackendId, Backends};
+use crate::backend::{BackendId, Empty, Select};
 use crate::error::*;
 use crate::pipe::TrussedInterchange;
 use crate::service::Service;
@@ -784,9 +784,9 @@ pub trait UiClient: PollClient {
     }
 }
 
-pub struct ClientBuilder<B: 'static = ()> {
+pub struct ClientBuilder<I: 'static = Empty> {
     id: PathBuf,
-    backends: &'static [BackendId<B>],
+    backends: &'static [BackendId<I>],
 }
 
 impl ClientBuilder {
@@ -798,7 +798,7 @@ impl ClientBuilder {
     }
 }
 
-impl<B: 'static> ClientBuilder<B> {
+impl<I: 'static> ClientBuilder<I> {
     pub fn with_backends<C: 'static>(self, backends: &'static [BackendId<C>]) -> ClientBuilder<C> {
         ClientBuilder {
             id: self.id,
@@ -806,9 +806,9 @@ impl<B: 'static> ClientBuilder<B> {
         }
     }
 
-    fn create_endpoint<P: Platform, Bs: Backends<P, Id = B>>(
+    fn create_endpoint<P: Platform, B: Select<P, Id = I>>(
         self,
-        service: &mut Service<P, Bs>,
+        service: &mut Service<P, B>,
     ) -> core::result::Result<Requester<TrussedInterchange>, ()> {
         let (requester, responder) = TrussedInterchange::claim().ok_or(())?;
         let client_ctx = ClientContext::from(self.id);
@@ -818,27 +818,27 @@ impl<B: 'static> ClientBuilder<B> {
         Ok(requester)
     }
 
-    pub fn build<P: Platform, Bs: Backends<P, Id = B>, S: Syscall>(
+    pub fn build<P: Platform, B: Select<P, Id = I>, S: Syscall>(
         self,
-        service: &mut Service<P, Bs>,
+        service: &mut Service<P, B>,
         syscall: S,
     ) -> core::result::Result<ClientImplementation<S>, ()> {
         self.create_endpoint(service)
             .map(|requester| ClientImplementation::new(requester, syscall))
     }
 
-    pub fn build_with_service<P: Platform, Bs: Backends<P, Id = B>>(
+    pub fn build_with_service<P: Platform, B: Select<P, Id = I>>(
         self,
-        mut service: Service<P, Bs>,
-    ) -> core::result::Result<ClientImplementation<Service<P, Bs>>, ()> {
+        mut service: Service<P, B>,
+    ) -> core::result::Result<ClientImplementation<Service<P, B>>, ()> {
         self.create_endpoint(&mut service)
             .map(|requester| ClientImplementation::new(requester, service))
     }
 
-    pub fn build_with_service_mut<P: Platform, Bs: Backends<P, Id = B>>(
+    pub fn build_with_service_mut<P: Platform, B: Select<P, Id = I>>(
         self,
-        service: &mut Service<P, Bs>,
-    ) -> core::result::Result<ClientImplementation<&mut Service<P, Bs>>, ()> {
+        service: &mut Service<P, B>,
+    ) -> core::result::Result<ClientImplementation<&mut Service<P, B>>, ()> {
         self.create_endpoint(service)
             .map(|requester| ClientImplementation::new(requester, service))
     }

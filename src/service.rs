@@ -5,7 +5,7 @@ use littlefs2::path::PathBuf;
 pub use rand_core::{RngCore, SeedableRng};
 
 use crate::api::*;
-use crate::backend::{BackendId, Backends};
+use crate::backend::{BackendId, Select, SoftwareOnly};
 use crate::client::ClientBuilder;
 use crate::config::*;
 use crate::error::Error;
@@ -71,10 +71,10 @@ impl<P: Platform> ServiceResources<P> {
     }
 }
 
-pub struct Service<P, B = ()>
+pub struct Service<P, B = SoftwareOnly>
 where
     P: Platform,
-    B: Backends<P>,
+    B: Select<P>,
 {
     eps: Vec<ServiceEndpoint<B::Id>, { MAX_SERVICE_CLIENTS::USIZE }>,
     resources: ServiceResources<P>,
@@ -82,7 +82,7 @@ where
 }
 
 // need to be able to send crypto service to an interrupt handler
-unsafe impl<P: Platform, B: Backends<P>> Send for Service<P, B> {}
+unsafe impl<P: Platform, B: Select<P>> Send for Service<P, B> {}
 
 impl<P: Platform> ServiceResources<P> {
     #[inline(never)]
@@ -664,11 +664,11 @@ impl<P: Platform> ServiceResources<P> {
 
 impl<P: Platform> Service<P> {
     pub fn new(platform: P) -> Self {
-        Self::with_backends(platform, ())
+        Self::with_backends(platform, SoftwareOnly)
     }
 }
 
-impl<P: Platform, B: Backends<P>> Service<P, B> {
+impl<P: Platform, B: Select<P>> Service<P, B> {
     pub fn with_backends(platform: P, backends: B) -> Self {
         let resources = ServiceResources::new(platform);
         Self {
@@ -713,7 +713,7 @@ impl<P: Platform> Service<P> {
     }
 }
 
-impl<P: Platform, B: Backends<P>> Service<P, B> {
+impl<P: Platform, B: Select<P>> Service<P, B> {
     pub fn add_endpoint(
         &mut self,
         interchange: Responder<TrussedInterchange>,
@@ -780,10 +780,11 @@ impl<P: Platform, B: Backends<P>> Service<P, B> {
                                 reply_result = resources.reply_to(&mut ep.client_ctx, &request);
                             }
                             BackendId::Custom(id) => {
-                                if let Some(backend) = self.backends.select(id) {
-                                    reply_result =
-                                        backend.reply_to(&mut ep.client_ctx, &request, resources);
-                                }
+                                reply_result = self.backends.select(id).reply_to(
+                                    &mut ep.client_ctx,
+                                    &request,
+                                    resources,
+                                );
                             }
                         }
 
@@ -827,7 +828,7 @@ impl<P: Platform, B: Backends<P>> Service<P, B> {
 impl<P, B> crate::client::Syscall for &mut Service<P, B>
 where
     P: Platform,
-    B: Backends<P>,
+    B: Select<P>,
 {
     fn syscall(&mut self) {
         self.process();
@@ -837,7 +838,7 @@ where
 impl<P, B> crate::client::Syscall for Service<P, B>
 where
     P: Platform,
-    B: Backends<P>,
+    B: Select<P>,
 {
     fn syscall(&mut self) {
         self.process();
