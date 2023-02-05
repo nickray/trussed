@@ -104,8 +104,7 @@ generate_enums! {
     ///////////
     DebugDumpStore: 0x79
 
-    #[cfg(feature = "ext")]
-    Extension: 0xff
+    SerdeExtension: 0x5E
 }
 
 pub mod request {
@@ -335,10 +334,9 @@ pub mod request {
           - location: Location
           - der: Message
 
-        #[cfg(feature = "ext")]
-        Extension:
+        SerdeExtension:
           - id: u8
-          - request: Bytes<{ crate::config::EXTENSION_REQUEST_LENGTH }>
+          - request: Bytes<{ crate::config::SERDE_EXTENSION_REQUEST_LENGTH }>
     }
 }
 
@@ -490,8 +488,7 @@ pub mod reply {
         WriteCertificate:
           - id: CertId
 
-        #[cfg(feature = "ext")]
-        Extension:
-          - reply: Bytes<{ crate::config::EXTENSION_REPLY_LENGTH }>
+        SerdeExtension:
+          - reply: Bytes<{ crate::config::SERDE_EXTENSION_REPLY_LENGTH }>
     }
 }
